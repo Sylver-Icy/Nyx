@@ -17,7 +17,7 @@ import sqlite3
 # conn.close()
 
 def add_exp(user_id,gained_exp):
-    conn = sqlite3.connect('testing.db')  
+    conn = sqlite3.connect('players.db')  
     cursor=conn.cursor()
     cursor.execute("""UPDATE Players 
                    SET Exp= Exp+?
@@ -26,7 +26,7 @@ def add_exp(user_id,gained_exp):
     conn.commit()
     conn.close()
 def add_user(user_id):
-    conn = sqlite3.connect('testing.db')  
+    conn = sqlite3.connect('players.db')  
     cursor=conn.cursor()
     cursor.execute(""" INSERT INTO Players (User_id)
                        VALUES(?)
@@ -34,7 +34,7 @@ def add_user(user_id):
     conn.commit()
     conn.close()
 def check_user(user_id):
-    conn=sqlite3.connect('testing.db')
+    conn=sqlite3.connect('players.db')
     cursor=conn.cursor()
     cursor.execute(""" 
                    SELECT EXISTS(SELECT 1 FROM Players WHERE User_id =?)

@@ -1,7 +1,8 @@
 import os
 import discord
 import asyncio
-import test
+import database
+import exphandler
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -11,13 +12,23 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 
 # Bot setup
 intents = discord.Intents.default()
-intents.message_content = True  # Enable message reading
+intents.message_content = True  
+intents.messages = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
     print(f"Bot is online as {bot.user}")
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+    await message.channel.send(f"{message.author.name} sent a message,the message was {message.content}") 
+    await exphandler.give_exp(message.author.id)
+    await bot.process_commands(message)
+    
+
 
 @bot.command()
 async def ping(ctx):
@@ -50,8 +61,8 @@ async def helloNyx(ctx):
         if msg.content.lower() == "yes":  
             
             user_id=str(ctx.author.id)
-            if( test.check_user(user_id) ==0):
-                test.add_user(user_id)
+            if( database.check_user(user_id) ==0):
+                database.add_user(user_id)
                 await ctx.send(f"Hy {ctx.author.mention}! Welcome aboard! 🎉")
             else:
                 await ctx.send(f"Hy {ctx.author.name}, Nice to see you again :)")
@@ -67,7 +78,7 @@ async def helloNyx(ctx):
 @bot.command()
 async def addexp(ctx):
     user_id=ctx.author.id
-    test.add_exp(user_id,100)
+    database.add_exp(user_id,100)
     await ctx.send("addexp")
 # Run the bot
 bot.run(TOKEN)

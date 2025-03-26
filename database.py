@@ -1,10 +1,8 @@
 import sqlite3  
 
-
-
-# cursor = conn.cursor() 
-
 # Create the 'Players' table 
+# conn=sqlite3.connect('players.db')
+# cursor = conn.cursor() 
 # cursor.execute("""
 #     CREATE TABLE IF NOT EXISTS Players(
 #         User_id TEXT PRIMARY KEY,   -- Unique identifier for each user
@@ -43,3 +41,14 @@ def check_user(user_id):
     exists=cursor.fetchone()[0]
     return exists
     conn.close()
+active_users=set()
+conn=sqlite3.connect('players.db')
+cursor=conn.cursor()
+cursor.execute("""SELECT User_id FROM Players""")
+users=cursor.fetchall()
+active_users = {user_id[0] for user_id in users}
+conn.close()
+# Function to check if user is in database
+def is_user(user_id):
+    return user_id in active_users
+print(active_users)

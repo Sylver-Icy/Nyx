@@ -7,8 +7,11 @@ import sqlite3
 on_cooldown={}
 batch_exp={}
 async def give_exp(user):
+    if not database.is_user(str(user)):
+         print("User is not registered!")
+         return
     now=time.time()
-    if user in on_cooldown and now-on_cooldown[user]<60:
+    if user in on_cooldown and now-on_cooldown[user]<0:
          return
     on_cooldown[user]=now
     exp=random.randint(5,15)
@@ -38,7 +41,7 @@ def push_exp_to_database():
 scheduler = BackgroundScheduler()
 
 # Schedule the function to run every 60 seconds
-scheduler.add_job(push_exp_to_database, 'interval', seconds=60, args=[batch_exp])
+scheduler.add_job(push_exp_to_database, 'interval', seconds=170)
 
 # Start the scheduler
 scheduler.start()

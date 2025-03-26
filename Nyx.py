@@ -15,8 +15,29 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 intents = discord.Intents.default()
 intents.message_content = True  
 intents.messages = True
-
 bot = commands.Bot(command_prefix="!", intents=intents)
+@bot.check
+async def is_registered(ctx):
+    """Global check to ensure user exists in the database before using any command."""
+    if ctx.command.name == "helloNyx":  # ✅ Allow this command to run for everyone
+        return True
+    user_id = str(ctx.author.id)  # Convert to string since database uses TEXT for User_id
+    if not database.is_user(user_id):  
+        await ctx.send(f"{ctx.author.mention}, You are not friend with Nyx! Say `!helloNyx` to get started.")
+        return False  # Deny command execution
+    return True  # Allow execution if user exists
+
+"""Functions"""
+
+
+
+"""Bot Events"""
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CheckFailure):
+        # Suppress the error so it doesn’t spam the terminal
+        return
+    raise error  # Only log actual errors
 
 @bot.event
 async def on_ready():
@@ -25,11 +46,12 @@ async def on_ready():
 async def on_message(message):
     if message.author.bot:
         return
+    print(f"Received message: {message.content}") 
     await bot.process_commands(message)
     # await message.channel.send(f"{message.author.name} sent a message,the message was {message.content}") 
     await exphandler.give_exp(message.author.id)
     
-
+"""Bot Commands"""
 
 @bot.command()
 async def ping(ctx):

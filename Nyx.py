@@ -6,6 +6,7 @@ import exphandler
 from discord.ext import commands
 from dotenv import load_dotenv
 
+
 # Load token from .env file
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -24,9 +25,9 @@ async def on_ready():
 async def on_message(message):
     if message.author.bot:
         return
-    await message.channel.send(f"{message.author.name} sent a message,the message was {message.content}") 
-    await exphandler.give_exp(message.author.id)
     await bot.process_commands(message)
+    # await message.channel.send(f"{message.author.name} sent a message,the message was {message.content}") 
+    await exphandler.give_exp(message.author.id)
     
 
 

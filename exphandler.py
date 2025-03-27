@@ -13,7 +13,7 @@ exp_list = [
     32000, 38000, 48000, 60000, 78000, 100000
 ]
 def lvlup(current_exp, user):
-    print("lvlup func called")
+    # print("lvlup func called")
     new_level = 0
     while new_level < len(exp_list) and current_exp >= exp_list[new_level]:
         new_level += 1
@@ -28,7 +28,7 @@ async def give_exp(user):
         return
 
     now = time.time()
-    if user in on_cooldown and now - on_cooldown[user] < 0:
+    if user in on_cooldown and now - on_cooldown[user] < 60:
         print("user on cooldown")
         return
     on_cooldown[user] = now
@@ -36,11 +36,10 @@ async def give_exp(user):
 
     database.active_users[user]["Exp"] += rand_exp  # ✅ Directly updating EXP
     print("exp granted",rand_exp)
-    print(database.active_users[user]["Exp"],user)
     lvlup(database.active_users[user]["Exp"], user)  # ✅ Ensure level-up logic runs
 
 def push_exp_to_database():
-    print("push func called")
+    # print("push func called")
     if not database.active_users:  # Avoid running the query if there's nothing to update
         return
 
@@ -59,7 +58,7 @@ def push_exp_to_database():
 
 # Initialize the scheduler
 scheduler = BackgroundScheduler()
-scheduler.add_job(push_exp_to_database, 'interval', seconds=6)
+scheduler.add_job(push_exp_to_database, 'interval', seconds=10)
 scheduler.start()
 print(database.active_users)
 print("Type of active_users:", type(database.active_users))  # Should be <class 'dict'>

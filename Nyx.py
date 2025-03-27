@@ -4,6 +4,7 @@ import asyncio
 import database
 import exphandler
 import reminders
+import random
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -18,6 +19,7 @@ intents.message_content = True
 intents.messages = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 exphandler.bot = bot
+reminders.bot=bot
 @bot.check
 async def is_registered(ctx):
     """Global check to ensure user exists in the database before using any command."""
@@ -62,17 +64,26 @@ async def on_command_error(ctx, error):
 async def on_ready():
     print(f"Bot is online as {bot.user}")
     print("Calling func properly")
-    # reminders.start_reminder(bot) 
+    asyncio.create_task(reminders.start_reminder(bot)) 
 @bot.event
 async def on_message(message):
     if message.author.bot:
         return
+
     print(f"Received message: {message.content}") 
+    await exphandler.give_exp(message.author.id)  # Give EXP
+
+    # Check if any command exists in the message
+    for command in bot.commands:
+        if f"!{command.name}" in message.content:
+            message.content = f"!{command.name}"  # Extract command only
+            ctx = await bot.get_context(message)
+            await bot.invoke(ctx)
+            return  
+
     await bot.process_commands(message)
-    # await message.channel.send(f"{message.author.name} sent a message,the message was {message.content}") 
-    await exphandler.give_exp(message.author.id)
     
-"""Bot Commands"""
+#BOT COMMANDS
 
 @bot.command()
 async def ping(ctx):
@@ -105,7 +116,7 @@ async def helloNyx(ctx):
         if msg.content.lower() == "yes":  
             
             user_id=ctx.author.id
-            if( database.check_user(user_id) ==0):
+            if not database.check_user(user_id):
                 database.add_user(user_id)
                 await ctx.send(f"Hy {ctx.author.mention}! Welcome aboard! 🎉")
             else:
@@ -135,12 +146,19 @@ async def deluser(ctx):
     try:
         msg = await bot.wait_for("message", check=check, timeout=30)  # Wait for reply (30 sec)
         target_user = msg.mentions[0]  # Get the first mentioned user
-        database.delete_user(target_user.id)  
+        database.delete_user(target_user.id)
 
         await ctx.send(f"Fine, {target_user.mention} has been erased from my memory >:)")
     except asyncio.TimeoutError:
         await ctx.send("Bruh, you took too long. Try again.")
     except IndexError:
         await ctx.send("You didn't tag anyone... what do you want me to do? 💀")
+@bot.command()
+async def flipcoin(ctx):
+    a=random.choice(["Head","Tails"])
+    await ctx.send(f"Tossing the coin.... andddddddd its a {a} !🥁")
+@bot.command()
+async def checkexp(ctx):
+    await ctx.send(f"You are currently at **{database.active_users[ctx.author.id]["lvl"]}** with {database.active_users[ctx.author.id]["Exp"]} Experience points")
 # Run the bot
 bot.run(TOKEN)

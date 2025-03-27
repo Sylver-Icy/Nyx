@@ -15,7 +15,7 @@ import sqlite3
 # conn.close()
 
 def add_exp(user_id,gained_exp):
-    conn = sqlite3.connect('players.db')  
+    conn = sqlite3.connect('Users.db')  
     cursor=conn.cursor()
     cursor.execute("""UPDATE Players 
                    SET Exp= Exp+?
@@ -24,7 +24,8 @@ def add_exp(user_id,gained_exp):
     conn.commit()
     conn.close()
 def add_user(user_id):
-    conn = sqlite3.connect('players.db')  
+    active_users[user_id]={"Exp":0,"lvl":1}
+    conn = sqlite3.connect('Users.db')  
     cursor=conn.cursor()
     cursor.execute(""" INSERT INTO Players (User_id)
                        VALUES(?)
@@ -32,23 +33,34 @@ def add_user(user_id):
     conn.commit()
     conn.close()
 def check_user(user_id):
-    conn=sqlite3.connect('players.db')
+    conn=sqlite3.connect('Users.db')
     cursor=conn.cursor()
     cursor.execute(""" 
                    SELECT EXISTS(SELECT 1 FROM Players WHERE User_id =?)
 
     """,(user_id,))
     exists=cursor.fetchone()[0]
-    return exists
     conn.close()
-active_users=set()
-conn=sqlite3.connect('players.db')
+    return exists
+active_users={}
+conn=sqlite3.connect('Users.db')
 cursor=conn.cursor()
-cursor.execute("""SELECT User_id FROM Players""")
+cursor.execute("""SELECT User_id,Exp,Level FROM Players""")
 users=cursor.fetchall()
-active_users = {user_id[0] for user_id in users}
+active_users = {user_id:{"Exp":exp,"lvl":lvl} for user_id ,exp,lvl in users}
 conn.close()
 # Function to check if user is in database
 def is_user(user_id):
     return user_id in active_users
-print(active_users)
+"""Debugging"""
+def delete_user(user_id):
+    if not is_user(user_id):
+        return
+    del active_users[user_id]
+    conn=sqlite3.connect('Users.db')
+    cursor=conn.cursor()
+    cursor.execute("""
+                        DELETE FROM Players WHERE User_id=?
+    """,(user_id,))
+    conn.commit()
+    conn.close()

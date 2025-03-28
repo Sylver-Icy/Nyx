@@ -160,5 +160,10 @@ async def flipcoin(ctx):
 @bot.command()
 async def checkexp(ctx):
     await ctx.send(f"You are currently at **{database.active_users[ctx.author.id]["lvl"]}** with {database.active_users[ctx.author.id]["Exp"]} Experience points")
+
+
+@bot.slash_command(name="shout", description="Shout something loudly")
+async def shout(ctx, message: str):
+    await ctx.respond(message.upper())  # Forces output to be uppercase
 # Run the bot
 bot.run(TOKEN)

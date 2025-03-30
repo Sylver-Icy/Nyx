@@ -1,66 +1,63 @@
-import sqlite3  
+from dotenv import load_dotenv
+import os
+import mysql.connector
+from apscheduler.schedulers.background import BackgroundScheduler
 
-# Create the 'Players' table 
-# conn=sqlite3.connect('players.db')
-# cursor = conn.cursor() 
-# cursor.execute("""
-#     CREATE TABLE IF NOT EXISTS Players(
-#         User_id TEXT PRIMARY KEY,   -- Unique identifier for each user
-#         Exp INTEGER DEFAULT 0,      -- Stores experience points, default is 0
-#         Level INTEGER DEFAULT 1     -- Stores player level, default is 1
-#     )
-# """)
 
-# conn.commit()
-# conn.close()
-
-def add_exp(user_id,gained_exp):
-    conn = sqlite3.connect('Users.db')  
-    cursor=conn.cursor()
-    cursor.execute("""UPDATE Players 
-                   SET Exp= Exp+?
-                   WHERE user_id =?
-                   """,(gained_exp,user_id))
-    conn.commit()
-    conn.close()
-def add_user(user_id):
-    active_users[user_id]={"Exp":0,"lvl":1}
-    conn = sqlite3.connect('Users.db')  
-    cursor=conn.cursor()
-    cursor.execute(""" INSERT INTO Players (User_id)
-                       VALUES(?)
-                   """,(user_id,))
-    conn.commit()
-    conn.close()
-def check_user(user_id):
-    conn=sqlite3.connect('Users.db')
-    cursor=conn.cursor()
-    cursor.execute(""" 
-                   SELECT EXISTS(SELECT 1 FROM Players WHERE User_id =?)
-
-    """,(user_id,))
-    exists=cursor.fetchone()[0]
-    conn.close()
-    return exists
-active_users={}
-conn=sqlite3.connect('Users.db')
+load_dotenv()
+password=os.getenv('DATABASE_PASSWORD')
+conn=mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password=password,
+    database="veyra_db"
+)
 cursor=conn.cursor()
-cursor.execute("""SELECT User_id,Exp,Level FROM Players""")
-users=cursor.fetchall()
-active_users = {user_id:{"Exp":exp,"lvl":lvl} for user_id ,exp,lvl in users}
-conn.close()
-# Function to check if user is in database
-def is_user(user_id):
-    return user_id in active_users
-"""Debugging"""
-def delete_user(user_id):
-    if not is_user(user_id):
-        return
-    del active_users[user_id]
-    conn=sqlite3.connect('Users.db')
-    cursor=conn.cursor()
-    cursor.execute("""
-                        DELETE FROM Players WHERE User_id=?
-    """,(user_id,))
+
+def add_player(user_id,user_name,premium_status=False):
+    query="INSERT INTO players (user_id,user_name,premium_status) VALUES(%s,%s,%s)"
+    cursor.execute(query,(user_id,user_name,premium_status))
     conn.commit()
-    conn.close()
+
+def  load_to_dic(table_name,dic):
+    query=f"SELECT * FROM {table_name}"
+    cursor.execute(query)
+    rows=cursor.fetchall()
+    columns=[desc[0] for desc in cursor.description]
+    dic.update({row[0]: dict(zip(columns,row))for row in rows})
+     
+def load_to_table(table_name, dic):
+    if not dic:
+        print("Dictionary is empty. Nothing to insert.")
+        return
+
+    columns = list(next(iter(dic.values())).keys())  # Get column names
+    placeholders = ', '.join(['%s'] * len(columns))
+    update_clause = ', '.join([f"{col} = VALUES({col})" for col in columns])  # MySQL 5.x/8.x style
+
+    query = f"""
+        INSERT INTO {table_name} ({', '.join(columns)}) 
+        VALUES ({placeholders})
+        ON DUPLICATE KEY UPDATE {update_clause}
+    """
+
+    values = [tuple(entry[col] for col in columns) for entry in dic.values()]
+    
+    cursor.executemany(query, values)
+    conn.commit()
+current_users={}
+load_to_dic("players",current_users)
+player_exp={}
+load_to_dic("player_exp",player_exp)
+def is_user(user_id):
+    if user_id in current_users:
+        return True
+    return False
+def push_exp_to_database():
+    load_to_table("player_exp",player_exp)
+    load_to_table("players",current_users)
+
+# Initialize the scheduler
+scheduler = BackgroundScheduler()
+scheduler.add_job(push_exp_to_database, 'interval', seconds=10)
+scheduler.start()

@@ -27,7 +27,7 @@ async def give_exp(user):
         return
 
     now = time.time()
-    if user in on_cooldown and now - on_cooldown[user] < 0:
+    if user in on_cooldown and now - on_cooldown[user] < 60:
         print("user on cooldown")
         return
     on_cooldown[user] = now

@@ -14,11 +14,46 @@ conn=mysql.connector.connect(
 )
 cursor=conn.cursor()
 
-def add_player(user_id,user_name,premium_status=False):
-    query="INSERT INTO players (user_id,user_name,premium_status) VALUES(%s,%s,%s)"
-    cursor.execute(query,(user_id,user_name,premium_status))
-    conn.commit()
+def add_player(user_id, user_name, premium_status=False):
+    query1 = "INSERT INTO players (user_id, user_name, premium_status) VALUES (%s, %s, %s)"
+    query2 = "INSERT INTO wallet (user_id) VALUES (%s)"  # Only inserting user_id
 
+    cursor.execute(query1, (user_id, user_name, premium_status))
+    cursor.execute(query2, (user_id,))
+    player_wallet[user_id]={'user_id':user_id,'user_gold':0,'user_gems':0,'user_event_tokens':0}
+    conn.commit()
+def del_player(table_name, user_id):
+    # allowed_tables = {"players", "wallet", "inventory"}  # Whitelist
+    # if table_name not in allowed_tables:
+    #     raise ValueError("Invalid table name")
+
+    query = f"DELETE FROM {table_name} WHERE user_id=%s"
+    cursor.execute(query, (user_id,))
+    conn.commit()
+def add_gold(user_id,amount):
+    # query="""UPDATE wallet
+    #         SET user_gold =GREATEST(user_gold+%s,0)
+    #         WHERE user_id=%s
+    # """
+    # cursor.execute(query,(amount,user_id))
+    # conn.commit()
+    player_wallet[user_id]['user_gold']=max(player_wallet[user_id]['user_gold']+amount,0)
+
+def add_item(item_name,price):
+     query="""INSERT INTO items(item_name,item_cost,item_rarity,item_description)
+             VALUES(%s,%s,'Epic','testing')"""
+     cursor.execute(query,(item_name,price))
+     conn.commit()
+
+def give_item(item_id,user_id,amount):
+    query="""INSERT INTO inventory (user_id,item_id,quantity)
+             VALUES(%s,%s,%s)
+             ON DUPLICATE KEY UPDATE quantity=quantity+%s
+    """
+    cursor.execute(query,(user_id,item_id,amount,amount))
+    conn.commit()
+def check_wallet(user_id):
+    return (player_wallet[user_id])
 def  load_to_dic(table_name,dic):
     query=f"SELECT * FROM {table_name}"
     cursor.execute(query)
@@ -30,6 +65,7 @@ def load_to_table(table_name, dic):
     if not dic:
         print("Dictionary is empty. Nothing to insert.")
         return
+
 
     columns = list(next(iter(dic.values())).keys())  # Get column names
     placeholders = ', '.join(['%s'] * len(columns))
@@ -46,18 +82,36 @@ def load_to_table(table_name, dic):
     cursor.executemany(query, values)
     conn.commit()
 current_users={}
-load_to_dic("players",current_users)
 player_exp={}
-load_to_dic("player_exp",player_exp)
-def is_user(user_id):
-    if user_id in current_users:
-        return True
-    return False
-def push_exp_to_database():
-    load_to_table("player_exp",player_exp)
-    load_to_table("players",current_users)
+player_wallet={}
+def items_dic():
+    cursor = conn.cursor(dictionary=True)  # ✅ Enables dictionary access
+    query="SELECT item_id , item_name FROM items"
+    cursor.execute(query)
+    result=cursor.fetchall()
+    return {row['item_name'].lower():row['item_id'] for row in result}
 
+
+load_to_dic("players",current_users)
+load_to_dic("player_exp",player_exp)
+load_to_dic("wallet",player_wallet)
+items=items_dic()
+def is_user(user_id):
+    return user_id in current_users
+def push_exp_to_database():
+    global conn, cursor
+    try:
+        if not conn.is_connected():
+            conn.reconnect()
+        load_to_table("player_exp", player_exp)
+        load_to_table("players", current_users)
+        load_to_table("wallet",player_wallet)
+    except mysql.connector.Error as err:
+        print(f"Database update failed: {err}")
+def look_for_item_id(item_name):
+    item_name=item_name.lower()
+    return items.get(item_name,0)
 # Initialize the scheduler
 scheduler = BackgroundScheduler()
-scheduler.add_job(push_exp_to_database, 'interval', seconds=10)
+scheduler.add_job(push_exp_to_database, 'interval', seconds=100)
 scheduler.start()

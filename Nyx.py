@@ -7,7 +7,7 @@ import inventory_management
 import reminders
 import random
 from discord.ext import commands
-from discord.commands import option
+from discord.commands import Option
 from dotenv import load_dotenv
 from datetime import datetime
 
@@ -170,16 +170,16 @@ async def checkwallet(ctx):
     money=database.check_wallet(user_id)
     await ctx.send(f"You currently own **{money['user_gold']}** Gold and **{money['user_gems']}** Gems")
 
-
-
-
+@bot.command()
+async def checkinventory(ctx):
+    player_inventory=inventory_management.inventory_table(ctx.author.id)
+    await ctx.send(f"\nHere is your inventory:\n```{player_inventory}```")
+    print(player_inventory)
 @bot.slash_command(name="shout", description="Shout something loudly")
 async def shout(ctx, message: str):
     await ctx.respond(message.upper())  # Forces output to be uppercase
 
 @bot.slash_command(name="give_gold",description="Gives gold to desired player")
-@option("amount",description="amount to be give",type=int)
-@option("target_user",description="user to recieve gold",type=discord.Member)
 async def give_gold(ctx,amount:int,target_user:discord.Member):
     if not database.is_user(target_user.id):
         await ctx.respond(f"{target_user.mention} is not registered can't tranfer gold!")
@@ -187,13 +187,15 @@ async def give_gold(ctx,amount:int,target_user:discord.Member):
     database.add_gold(target_user.id,amount)
     await ctx.respond(f"{ctx.author.mention} gave **{amount}** Gold to {target_user.mention}")
 @bot.slash_command(name="give_items",description="give other player items")
-@option("item_name",description="item_id of item to be given",type=str)
-@option("amount",description="how many of these items you wanna give",type=int)
-@option("target_user",description="who do you want to tranfer item",type=discord.Member)
-async def give_items(ctx,item_name,amount,target_user):
+async def give_items(ctx,item_name:str,amount:int,target_user:discord.Member):
     item_id=database.look_for_item_id(item_name)
     if not item_id:
-        await ctx.respond(f"Couldn't find {item_name}, Next time type carefully!",ephemeral=True)
+        auto=inventory_management.autocomplete(item_name)
+        if auto:
+            suggestions = " or maybe ".join(auto[:3])
+            await ctx.respond(f"Couldn't find '{item_name}', did you mean {suggestions} ?" )
+        else:
+            await ctx.respond(f"There is no such item {item_name},not even close bruh")
         return
     if not database.is_user(target_user.id):
         await ctx.respond(f"{target_user.mention} is not part of database! Can't send items.")
@@ -204,9 +206,23 @@ async def give_items(ctx,item_name,amount,target_user):
 # async def item_name_autocomplete(ctx:discord.AutocompleteContext):
 #     items=inventory_management.autocomplete(ctx.value)
 #     return items[:10] if items else []
-@bot.slash_command(name="add_item",description="adds any desired item to database")
-async def add_item(ctx,item_name:str,item_price:int):
-    database.add_item(item_name,item_price)
-    await ctx.respond(f"succesfully added {item_name} for the price of {item_price} Golds")
+
+@bot.slash_command(name="add_item", description="Adds any desired item to the database")
+async def add_item(
+    ctx: discord.ApplicationContext,
+    item_id: int,
+    item_name: str,
+    item_price: int,
+    item_description: str,
+    item_rarity: Option(str, "Choose item rarity", choices=["Common", "Rare", "Epic", "Mythic", "Legendary", "Paragon"])
+):
+    if item_id in database.items.values():
+        await ctx.respond("Another item with this key exists,try different key")
+        return
+    database.add_item(item_name.lower(), item_price, item_id, item_description, item_rarity)
+    await ctx.respond(
+        f"Successfully added a {item_rarity} item ({item_name.capitalize()}) for the price of {item_price} Golds.\n"
+        f"The item is described as: '*{item_description}*'\n"
+    )
 # Run the bot
 bot.run(TOKEN)

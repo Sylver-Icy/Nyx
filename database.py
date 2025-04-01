@@ -39,11 +39,12 @@ def add_gold(user_id,amount):
     # conn.commit()
     player_wallet[user_id]['user_gold']=max(player_wallet[user_id]['user_gold']+amount,0)
 
-def add_item(item_name,price):
-     query="""INSERT INTO items(item_name,item_cost,item_rarity,item_description)
-             VALUES(%s,%s,'Epic','testing')"""
-     cursor.execute(query,(item_name,price))
-     conn.commit()
+def add_item(item_name:str,item_cost,item_id,item_description,item_rarity):
+    items[item_name]=item_id
+    query="""INSERT INTO items(item_id,item_name,item_cost,item_rarity,item_description)
+             VALUES(%s,%s,%s,%s,%s)"""
+    cursor.execute(query,(item_id,item_name,item_cost,item_rarity,item_description))
+    conn.commit()
 
 def give_item(item_id,user_id,amount):
     query="""INSERT INTO inventory (user_id,item_id,quantity)
@@ -52,8 +53,23 @@ def give_item(item_id,user_id,amount):
     """
     cursor.execute(query,(user_id,item_id,amount,amount))
     conn.commit()
+def check_inventory(user_id):
+    query="""SELECT
+             i.item_name,
+             inv.quantity,
+             i.item_description
+             FROM 
+             items i
+             JOIN
+             inventory inv ON inv.item_id=i.item_id
+             WHERE inv.user_id=%s
+"""
+    cursor.execute(query, (user_id,))
+    results = cursor.fetchall()
+    return results
 def check_wallet(user_id):
     return (player_wallet[user_id])
+
 def  load_to_dic(table_name,dic):
     query=f"SELECT * FROM {table_name}"
     cursor.execute(query)
@@ -84,6 +100,7 @@ def load_to_table(table_name, dic):
 current_users={}
 player_exp={}
 player_wallet={}
+player_inventory={}
 def items_dic():
     cursor = conn.cursor(dictionary=True)  # ✅ Enables dictionary access
     query="SELECT item_id , item_name FROM items"
@@ -115,3 +132,4 @@ def look_for_item_id(item_name):
 scheduler = BackgroundScheduler()
 scheduler.add_job(push_exp_to_database, 'interval', seconds=100)
 scheduler.start()
+check_inventory(915837736819249223)

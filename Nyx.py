@@ -5,6 +5,7 @@ import database
 import exphandler
 import inventory_management
 import reminders
+import shop_management
 import random
 from discord.ext import commands
 from discord.commands import Option
@@ -71,7 +72,13 @@ async def on_message(message):
     # Check if any command exists in the message
     for command in bot.commands:
         if f"!{command.name}" in message.content:
-            message.content = f"!{command.name}"  # Extract command only
+        # Extract the command with everything after it
+            command_start = message.content.index(f"!{command.name}")
+            new_content = message.content[command_start:]  # Keep arguments intact
+        
+        # Modify message content safely
+            message.content = new_content  
+        
             ctx = await bot.get_context(message)
             await bot.invoke(ctx)
             return  
@@ -175,6 +182,30 @@ async def checkinventory(ctx):
     player_inventory=inventory_management.inventory_table(ctx.author.id)
     await ctx.send(f"\nHere is your inventory:\n```{player_inventory}```")
     print(player_inventory)
+@bot.command()
+async def buy(ctx, arg: str, arg2: int = 1):
+    name=arg.capitalize()
+    quanity=arg2
+    if name not in shop_management.shop:
+        await ctx.send("That item is not in shop use `/shop` to see all available deals")
+        return
+    player_money=database.player_wallet[ctx.author.id]['user_gold']
+    item_price=shop_management.shop[name]
+    if player_money>=item_price*quanity:
+        item_id=database.look_for_item_id(name)
+        print(item_id)
+        database.give_item(item_id,ctx.author.id,quanity)
+        database.player_wallet[ctx.author.id]['user_gold']-=(item_price*quanity)
+        await ctx.send(f"You bought {quanity} X {name} for {item_price*quanity} Gold ")
+    elif(player_money<item_price):
+        await ctx.send(f"You brokie you can't afford {name}.Make some money first!")
+    else:
+        afford=player_money//item_price
+        await ctx.send(f"Nuh uh! Too broke to buy that many. However you can afford {afford} X {name}")
+        
+
+    
+    
 @bot.slash_command(name="shout", description="Shout something loudly")
 async def shout(ctx, message: str):
     await ctx.respond(message.upper())  # Forces output to be uppercase
@@ -188,7 +219,7 @@ async def give_gold(ctx,amount:int,target_user:discord.Member):
     await ctx.respond(f"{ctx.author.mention} gave **{amount}** Gold to {target_user.mention}")
 @bot.slash_command(name="give_items",description="give other player items")
 async def give_items(ctx,item_name:str,amount:int,target_user:discord.Member):
-    item_id=database.look_for_item_id(item_name)
+    item_id=database.look_for_item_id(item_name.capitalize())
     if not item_id:
         auto=inventory_management.autocomplete(item_name)
         if auto:
@@ -219,10 +250,70 @@ async def add_item(
     if item_id in database.items.values():
         await ctx.respond("Another item with this key exists,try different key")
         return
-    database.add_item(item_name.lower(), item_price, item_id, item_description, item_rarity)
+    database.add_item(item_name.capitalize(), item_price, item_id, item_description, item_rarity)
     await ctx.respond(
         f"Successfully added a {item_rarity} item ({item_name.capitalize()}) for the price of {item_price} Golds.\n"
         f"The item is described as: '*{item_description}*'\n"
     )
+@bot.slash_command(name="test")
+async def test(ctx):
+    embed=discord.Embed(
+        title=f"{ctx.author.name}'s Inventory",
+        description="Here are all the items owned by you",
+        color=discord.Color.nitro_pink()
+    )
+    embed.add_field(name="Test1        `15 Gold`   `Rare`   `8 Owned`", value="Testing this embed")  # Invisible space character
+    embed.add_field(name="A bigger name for testing embeds format   `24 Gold`      `Paragon`     `24 owned`", value="Now we need a bigger description too to test the format of embed. We are gonna find out how big descriptions will look in our embed. Let's hope they look nice",inline=False)
+    embed.add_field(name="test3      `69 Gold`      `Common`      `2 Owned`", value="This item is to verify how tf items below big descriptions will look", inline=False)
+    await ctx.respond(embed=embed)
+@bot.slash_command(name="test2")
+async def test2(ctx):
+    embed=discord.Embed(
+        title=f"{ctx.author.name}'s inventory",
+        description="Here are all the items owned by you",
+        color=discord.Colour.blue()
+    )
+    embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/4230/4230567.png")
+    inventory=database.check_inventory(ctx.author.id)
+    if inventory:
+        for i in inventory:
+            embed.add_field(name=f"{i[0]}     X`{i[1]}`        `{i[3]}`",value=f"{i[2]}",inline=False)
+        await ctx.respond(embed=embed)
+
+    else:
+        database.give_item(1,ctx.author.id,1)
+        await ctx.respond(f"Awww poor baby {ctx.author.mention}, you don't own anything.Here have this ** Sword ** to defend yourself")
+
+
+@bot.slash_command(name="test3")
+async def test3(ctx):
+    # Define rarity colors using emojis or colored squares
+    rarity_colors = {
+        "Common": "🟩 Common",
+        "Rare": "🟦 Rare",
+        "Epic": "🟪 Epic",
+        "Legendary": "🟨 Legendary"
+    }
+
+    embed = discord.Embed(
+        title=f"{ctx.author.name}'s inventory",
+        description="Here are all the items owned by you",
+        color=discord.Colour.blue()
+    )
+
+    for i in database.check_inventory(ctx.author.id):
+        rarity_label = rarity_colors.get(i[3], i[3])  # Default to original if not found
+        embed.add_field(
+            name=f"{i[0]}     X`{i[1]}`        `{rarity_label}`",
+            value=f"{i[2]}",
+            inline=False
+        )
+
+    await ctx.respond(embed=embed)
+@bot.slash_command(name="shop")
+async def shop(ctx):
+    shop_embed=shop_management.embed
+    # shop_embed.set_footer(text=f" Current Gold  {database.player_wallet[ctx.author.id]['user_gold']}")
+    await ctx.respond(embed=shop_embed)
 # Run the bot
 bot.run(TOKEN)

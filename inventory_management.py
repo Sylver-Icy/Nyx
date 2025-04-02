@@ -15,3 +15,4 @@ def inventory_table(user_id):
     for row in inventory:
         table.add_row(row)
     return str(table)
+print(database.check_inventory(915837736819249223))

@@ -40,6 +40,7 @@ def add_gold(user_id,amount):
     player_wallet[user_id]['user_gold']=max(player_wallet[user_id]['user_gold']+amount,0)
 
 def add_item(item_name:str,item_cost,item_id,item_description,item_rarity):
+
     items[item_name]=item_id
     query="""INSERT INTO items(item_id,item_name,item_cost,item_rarity,item_description)
              VALUES(%s,%s,%s,%s,%s)"""
@@ -54,19 +55,15 @@ def give_item(item_id,user_id,amount):
     cursor.execute(query,(user_id,item_id,amount,amount))
     conn.commit()
 def check_inventory(user_id):
-    query="""SELECT
-             i.item_name,
-             inv.quantity,
-             i.item_description
-             FROM 
-             items i
-             JOIN
-             inventory inv ON inv.item_id=i.item_id
-             WHERE inv.user_id=%s
-"""
+    query = """
+        SELECT i.item_name, inv.quantity, i.item_description, i.item_rarity
+        FROM inventory inv
+        JOIN items i ON inv.item_id = i.item_id
+        WHERE inv.user_id = %s
+    """
     cursor.execute(query, (user_id,))
     results = cursor.fetchall()
-    return results
+    return results or []
 def check_wallet(user_id):
     return (player_wallet[user_id])
 
@@ -106,7 +103,7 @@ def items_dic():
     query="SELECT item_id , item_name FROM items"
     cursor.execute(query)
     result=cursor.fetchall()
-    return {row['item_name'].lower():row['item_id'] for row in result}
+    return {row['item_name'].capitalize():row['item_id'] for row in result}
 
 
 load_to_dic("players",current_users)
@@ -123,13 +120,14 @@ def push_exp_to_database():
         load_to_table("player_exp", player_exp)
         load_to_table("players", current_users)
         load_to_table("wallet",player_wallet)
+        # print("pushed")
     except mysql.connector.Error as err:
         print(f"Database update failed: {err}")
 def look_for_item_id(item_name):
-    item_name=item_name.lower()
+    item_name=item_name.capitalize()
     return items.get(item_name,0)
 # Initialize the scheduler
 scheduler = BackgroundScheduler()
-scheduler.add_job(push_exp_to_database, 'interval', seconds=100)
+scheduler.add_job(push_exp_to_database, 'interval', seconds=1000)
 scheduler.start()
-check_inventory(915837736819249223)
+print(items)

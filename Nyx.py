@@ -6,6 +6,7 @@ import exphandler
 import inventory_management
 import reminders
 import shop_management
+import minigames
 import random
 from discord.ext import commands
 from discord.commands import Option
@@ -269,7 +270,7 @@ async def test(ctx):
 @bot.slash_command(name="test2")
 async def test2(ctx):
     embed=discord.Embed(
-        title=f"{ctx.author.name}'s inventory",
+        title=f"**{ctx.author.name}'s inventory**",
         description="Here are all the items owned by you",
         color=discord.Colour.blue()
     )
@@ -315,5 +316,28 @@ async def shop(ctx):
     shop_embed=shop_management.embed
     # shop_embed.set_footer(text=f" Current Gold  {database.player_wallet[ctx.author.id]['user_gold']}")
     await ctx.respond(embed=shop_embed)
-# Run the bot
+@bot.slash_command(name="describe", description="Use it to describe any item")
+async def describe(
+    ctx,
+    item_name: Option(str, "Enter the name of the item you want to describe")  # ✅ Adds a description
+):
+    name = item_name.capitalize()
+    if name not in database.items:
+        auto=inventory_management.autocomplete(item_name)
+        if auto:
+            await ctx.respond(f"No such item available.Perhaps you meant {auto[0]}")
+            return
+        else:
+            await ctx.respond(f"I don't remeber anything like {item_name}")
+            return
+
+    item = inventory_management.Item(name)  # ✅ Create an instance
+    embed = item.item_embed()  # ✅ Call method on instance
+
+    await ctx.respond(embed=embed)
+    # Run the bot
+@bot.slash_command(name="rcp",description="Starts a game of Rock Paper Scissors")
+async def rcp(ctx,select_your_opponent:discord.Member,rounds:int,bet:int):
+    await minigames.rcp(ctx,select_your_opponent,rounds,bet)
+
 bot.run(TOKEN)

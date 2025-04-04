@@ -4,7 +4,7 @@ import discord
 
 
 embed=discord.Embed(
-    title="Veyra's Bazar",
+    title="**Veyra's Bazar**",
     description="A fancy shop for all your needs",
     color=discord.Colour.purple()
 )

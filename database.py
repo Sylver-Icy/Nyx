@@ -64,6 +64,12 @@ def check_inventory(user_id):
     cursor.execute(query, (user_id,))
     results = cursor.fetchall()
     return results or []
+
+def item_details(item_id):
+    query = "SELECT * FROM items WHERE item_id = %s"
+    cursor.execute(query, (item_id,))  
+    result = cursor.fetchone()  
+    return result if result else []  
 def check_wallet(user_id):
     return (player_wallet[user_id])
 
@@ -130,4 +136,3 @@ def look_for_item_id(item_name):
 scheduler = BackgroundScheduler()
 scheduler.add_job(push_exp_to_database, 'interval', seconds=1000)
 scheduler.start()
-print(items)

@@ -47,6 +47,7 @@ class RCP_button(discord.ui.View):
             p2 = self.target.id
             p1choice = self.choices[p1]  # ✅ Fix dictionary access
             p2choice = self.choices[p2]
+            print(p1choice,p2choice)
 
             WINNING_MOVES = {
                 "Rock": "Scissors",

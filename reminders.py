@@ -19,6 +19,6 @@ def schedule_next_reminder(bot):
     scheduler.add_job(water_reminder, 'interval', minutes=39, args=[bot])
 
 async def start_reminder(bot):
-    await water_reminder(bot) #first call right after bot starts
+    # await water_reminder(bot) #first call right after bot starts
     schedule_next_reminder(bot)  # ✅ Start the first reminder
     scheduler.start()

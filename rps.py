@@ -1,6 +1,8 @@
 import discord
 import asyncio
-import database
+import reactiongame
+
+
 class Accept_Button(discord.ui.View):
     def __init__(self, challenger, target, timeout=30):
         super().__init__(timeout=timeout)
@@ -110,7 +112,7 @@ async def start_rps(ctx, target_user: discord.Member, rounds,bet):
 
     p1_score = 0
     p2_score = 0
-    needed_wins = (rounds // 2) + 1  # Best-of-N rule
+    # needed_wins = (rounds // 2) + 1  # Best-of-N rule
     for round_number in range(1, rounds + 1):
         view = RCP_button(ctx.author, target_user)
         embed = discord.Embed(
@@ -148,19 +150,25 @@ async def start_rps(ctx, target_user: discord.Member, rounds,bet):
         await thread.send(result_message)
 
         # Check for match winner
-        if p1_score >= needed_wins:
-            await thread.send(f"🏆 **{ctx.author.mention} wins the match!** Final Score: {p1_score}-{p2_score}")
+        rounds_remaining=rounds-round_number
+        if p1_score > p2_score + rounds_remaining:
+            await ctx.send(f"🏆 **{ctx.author.mention} won the match against {target_user.mention}! This win them {bet *2} Gold** \n Final Score {p1_score}-{p2_score}")
+            reactiongame.finished_game.add(thread.id)
             return
-        if p2_score >= needed_wins:
-            await thread.send(f"🏆 **{target_user.mention} wins the match!** Final Score: {p2_score}-{p1_score}")
+        if p2_score > p1_score + rounds_remaining:
+            await ctx.send(f"🏆 **{target_user.mention} won the match against {ctx.author.mention}! This win them {bet *2} Gold** \n Final Score {p1_score}-{p2_score}")
+            reactiongame.finished_game.add(thread.id)
             return
 
     # **Final results**
     if p1_score > p2_score:
-        final_message = f"🏆 **{ctx.author.mention} wins the match!** {p1_score}-{p2_score}"
+        final_message = f"🏆 **{ctx.author.mention} won the match against {target_user.mention}! This win them {bet *2} Gold** \n Final Score {p1_score}-{p2_score}"
     elif p2_score > p1_score:
-        final_message = f"🏆 **{target_user.mention} wins the match!** {p2_score}-{p1_score}"
+        final_message = f"🏆 **{target_user.mention} won the match against {ctx.author.mention}! This wins them {bet *2} Gold** \n Final Score {p2_score}-{p1_score}"
     else:
-        final_message = "⚔️ The match is a **draw**! 🤝"
+        final_message = f"⚔️ The match between {ctx.author.name} & {target_user.name} was a **draw**! 🤝 Pot Money Refunded"
 
-    await thread.send(final_message)
+    await ctx.send(final_message)
+    reactiongame.finished_game.add(thread.id)
+
+    

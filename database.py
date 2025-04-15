@@ -146,9 +146,10 @@ def load_to_table(table_name, dic):
     """
 
     values = [tuple(entry[col] for col in columns) for entry in dic.values()]
-    
     cursor.executemany(query, values)
     conn.commit()
+
+
 
 #Making empty dics to be filled later from table and used as cache
 
@@ -208,7 +209,8 @@ def look_for_item_id(item_name):
     item_name=item_name.capitalize()
     return items.get(item_name,0)
 
+
 # Initialize the scheduler
 scheduler = BackgroundScheduler()
-scheduler.add_job(push_to_database, 'interval', seconds=1000)
+scheduler.add_job(push_to_database, 'interval', seconds=10)
 scheduler.start()

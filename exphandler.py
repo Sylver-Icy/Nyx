@@ -11,7 +11,7 @@ exp_list = [
     5500, 7000, 9000, 12000, 15000, 18000, 22000, 27000, 
     32000, 38000, 48000, 60000, 78000, 100000
 ]
-def lvlup(current_exp, user):
+async def lvlup(current_exp, user):
     print("lvlup func called")
     new_level = 0
     while new_level < len(exp_list) and current_exp >= exp_list[new_level]:
@@ -19,13 +19,13 @@ def lvlup(current_exp, user):
     current_lvl=database.player_exp[user]["player_lvl"]
     if new_level>current_lvl:
         database.player_exp[user]["player_lvl"] = new_level
-        bot.dispatch("level_up", user, new_level)
+        channel=bot.get_channel(1353355604781174846)
+        await channel.send(f"<@{user}>Reached level {new_level} 🎉 yippeeeee!")
 
 async def give_exp(user):
     if not database.is_user((user)):
         print("User is not registered!")
         return
-
     now = time.time()
     if user in on_cooldown and now - on_cooldown[user] < 60:
         print("user on cooldown")
@@ -36,6 +36,6 @@ async def give_exp(user):
         database.player_exp[user]={'user_id':user,'player_exp':0,'player_lvl':1}
     database.player_exp[user]["player_exp"] += rand_exp  # ✅ Directly updating EXP
     print("exp granted",rand_exp)
-    lvlup(database.player_exp[user]["player_exp"], user)  # ✅ Ensure level-up logic runs
+    await lvlup(database.player_exp[user]["player_exp"], user)  # ✅ Ensure level-up logic runs
 
 

@@ -26,6 +26,7 @@ intents.messages = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 exphandler.bot = bot
 reminders.bot=bot
+reactiongame.bot=bot
 @bot.check
 async def is_registered(ctx):
     """Global check to ensure user exists in the database before using any command."""
@@ -37,17 +38,6 @@ async def is_registered(ctx):
         return False  # Deny command execution
     return True  # Allow execution if user exists
 """Bot Events"""
-
-
-@bot.event
-async def on_level_up(user_id, new_level):
-    """Custom level up event made to congratulate users on levelling up"""
-    user = await bot.fetch_user(user_id)    
-    channel=bot.fetch_channel(1353355604781174846)
-    channel.send(f"🎉 {user.mention} has leveled up to **Level {new_level}**! Yippeeeeeee!")
-   
-
-
 async def on_command_error(ctx, error):
     "Something was annoying my terminal asked chatgpt to fix it idk what it does but it works 🫡"
     if isinstance(error, commands.CheckFailure):

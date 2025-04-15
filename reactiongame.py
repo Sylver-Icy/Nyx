@@ -1,5 +1,10 @@
 import discord
 import asyncio
+from apscheduler.schedulers.background import BackgroundScheduler
+import random
+import datetime
+
+bot=None
 
 class JoinView(discord.ui.View):
     def __init__(self, timeout=6):
@@ -28,6 +33,17 @@ async def start_reaction_game(ctx):
 
     # Wait for view timeout
     await view.wait()
+    
+    for child in view.children:
+        child.disabled = True
+    await msg.edit(view=view)
+
+    updated_embed = discord.Embed(
+        title="Joining closed!",
+        description="Time's up! The game has started in a private thread. No turning back now.",
+        color=discord.Color.red()
+    )
+    await msg.edit(embed=updated_embed)
 
     guild = channel.guild
     joined_members = [guild.get_member(uid) for uid in view.joined_users if guild.get_member(uid)]
@@ -36,7 +52,10 @@ async def start_reaction_game(ctx):
         await channel.send("Nobody joined. Bunch of cowards.")
         return
 
-    thread = await msg.create_thread(name="Secret Ops 🔒", type=discord.ChannelType.private_thread)
+    thread = await ctx.channel.create_thread(
+        name="Reaction Game",
+        type=discord.ChannelType.private_thread,
+    )
 
     for member in joined_members:
         try:
@@ -44,4 +63,68 @@ async def start_reaction_game(ctx):
         except Exception as e:
             print(f"Failed to add {member}: {e}")
 
-    await channel.send(f"Thread spawned with {len(joined_members)} legends.")
+    await begin_game(thread,joined_members)
+
+    # Game Logic
+async def begin_game(thread,joined_members):
+    await thread.send("Send `⚡️` when I say Flash!")
+    delay=random.randint(3,6)
+    await asyncio.sleep(delay)
+    await thread.send("Flash!")
+    flash_time=datetime.datetime.utcnow()
+
+    def check(m):
+        return (
+            isinstance(m.channel, discord.Thread) and
+            m.channel.id == thread.id and
+            m.content.strip() == "⚡️" and
+            m.author in joined_members
+        )
+    reaction_time={}
+    try:
+        while True:
+            msg=await bot.wait_for("message",timeout=7,check=check)
+            user_id=msg.author.id
+            if user_id not in reaction_time:
+                msg_time=msg.created_at.replace(tzinfo=None)
+                diff=(msg_time-flash_time).total_seconds() * 1000
+                reaction_time[user_id]=diff
+    except asyncio.TimeoutError:
+        await thread.send("Time's up here is how everyone did:")
+    
+    if not reaction_time:
+        await thread.send("No one could react fast enough")
+    else:
+        leaderboard=sorted(reaction_time.items(),key=lambda x: x[1])
+        result="\n".join(
+            [f"<@{user_id}>: {int(diff)} ms" for user_id,diff in leaderboard]
+        )
+        await thread.send(result)
+        finished_game.add(thread.id)
+
+
+
+    #===FOR THE DELETION OF FINISHED GAMES==
+finished_game = set()
+
+#Store the loop
+loop = asyncio.get_event_loop()
+
+# The async task
+async def delete_finished_games(finished_games: set):
+    for thread_id in finished_games:
+        thread = bot.get_channel(thread_id)
+        if thread and isinstance(thread, discord.Thread):
+            try:
+                await thread.delete()
+            except Exception as e:
+                print(f"Error deleting thread {thread_id}: {e}")
+    finished_game.clear()
+
+# Thread-safe wrapper
+def schedule_cleanup():
+    asyncio.run_coroutine_threadsafe(delete_finished_games(finished_game.copy()), loop)
+# Step 4: Register job
+scheduler = BackgroundScheduler()
+scheduler.add_job(schedule_cleanup, 'interval', seconds=60)
+scheduler.start()

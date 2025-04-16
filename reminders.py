@@ -16,7 +16,7 @@ def schedule_next_reminder(bot):
     """Schedules the next water reminder with a new random interval."""
     x = random.randint(40, 60)  # ✅ Pick a new interval every time
     print(f"✅ Next reminder in {x} minutes")
-    scheduler.add_job(water_reminder, 'interval', minutes=89, args=[bot])
+    scheduler.add_job(water_reminder, 'interval', minutes=49, args=[bot])
 
 async def start_reminder(bot):
     # await water_reminder(bot) #first call right after bot starts

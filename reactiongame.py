@@ -7,7 +7,7 @@ import datetime
 bot=None
 
 class JoinView(discord.ui.View):
-    def __init__(self, timeout=6):
+    def __init__(self, timeout=10):
         super().__init__(timeout=timeout)
         self.joined_users = set()
 
@@ -83,7 +83,7 @@ async def begin_game(thread,joined_members):
     reaction_time={}
     try:
         while True:
-            msg=await bot.wait_for("message",timeout=7,check=check)
+            msg=await bot.wait_for("message",timeout=15,check=check)
             user_id=msg.author.id
             if user_id not in reaction_time:
                 msg_time=msg.created_at.replace(tzinfo=None)

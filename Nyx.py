@@ -4,11 +4,12 @@ import asyncio
 import database
 import exphandler
 import inventory_management
-import reminders
+# import reminders
 import shop_management
 import rps
 import reactiongame
 import random
+import commands_help
 from discord.ext import commands
 from discord.commands import Option
 from dotenv import load_dotenv
@@ -25,7 +26,7 @@ intents.message_content = True
 intents.messages = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 exphandler.bot = bot
-reminders.bot=bot
+# reminders.bot=bot
 reactiongame.bot=bot
 @bot.check
 async def is_registered(ctx):
@@ -51,7 +52,7 @@ async def on_ready():
     """Event to call func after bot activates"""
     print(f"Bot is online as {bot.user}")
     print("Calling func properly")
-    asyncio.create_task(reminders.start_reminder(bot)) #creates the reminder task
+    # asyncio.create_task(reminders.start_reminder(bot)) #creates the reminder task
 
 
 @bot.event
@@ -63,7 +64,7 @@ async def on_message(message):
         return
 
     # print(f"Received message: {message.content}")
-    await exphandler.give_exp(message.author.id)  # Give EXP
+    await exphandler.give_exp(message.author.id,message.channel.id)  # Give EXP
 
     # Check if any command exists in the message
     for command in bot.commands:
@@ -73,11 +74,7 @@ async def on_message(message):
             new_content = message.content[command_start:]  # Keep arguments intact    
         # Modify message content safely
             message.content = new_content
-
-            ctx = await bot.get_context(message)
-            await bot.invoke(ctx)
             return
-
     await bot.process_commands(message)
 
 #BOT COMMANDS
@@ -357,8 +354,8 @@ async def describe(
     await ctx.respond(embed=embed)
 
 
-@bot.slash_command(name="rcp",description="Starts a game of Rock Paper Scissors")
-async def rcp(ctx,select_your_opponent:discord.Member,rounds:int,bet:int):
+@bot.slash_command(name="rps",description="Starts a game of Rock Paper Scissors")
+async def rock(ctx,select_your_opponent:discord.Member,rounds:int,bet:int):
     """
     Lets player challenge others for rcp game
     """
@@ -370,9 +367,11 @@ async def reaction_game(ctx):
     """
     Starts the reaction game
     """
-    channel=bot.get_channel(1353355604781174846)
     await reactiongame.start_reaction_game(ctx)
 
 
+@bot.slash_command(name="help",description="lists all the bot commands")
+async def help(ctx):
+    await commands_help.commands_list(ctx)
 # Run the bot
 bot.run(TOKEN)
